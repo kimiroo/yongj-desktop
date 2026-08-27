@@ -1,0 +1,87 @@
+# Two-line prompt: line 1 = context (user@host if SSH, dir, git, venv, k8s),
+# line 2 = input, colored by last command's success/failure. Explicit
+# format: only these modules are evaluated at all, everything else in
+# starship's default module list is skipped (no cost). No time/duration,
+# no system-resource modules. No corner connector / box-drawing chars on
+# either line -- plain fallback assumes ASCII-only rendering, so the two
+# lines are left unconnected rather than risk another glyph that doesn't
+# render.
+#
+# Fallback config for terminals that can't be trusted to render nerd font
+# glyphs (see _use_plain_prompt in ~/.zshrc). Same module set, order, and
+# logic as the main starship.toml -- only the glyphs themselves differ:
+# every nerd font icon and box-drawing/separator character below is
+# swapped for plain ASCII. No codepoint-authoring concerns here (unlike
+# the nerd-font version, see ZSH.md) since everything is a literal ASCII
+# character typed directly.
+#
+# Separator: each module after $directory prefixes its own format with a
+# dimmed "|" -- baked into that module's own format string, not the
+# top-level one, so it only appears (and disappears) together with that
+# module's actual content (module-level / inner-group suppression already
+# hides the whole thing, separator included, when there's nothing to show).
+format = """
+$username$hostname$directory$git_branch$git_status$python$kubernetes
+$character"""
+
+command_timeout = 500
+scan_timeout = 10
+
+# Only rendered in an SSH session (both default to this, made explicit here).
+# On this single-user local workstation user@host is always the same value,
+# so showing it locally would just be noise; over SSH it's the one signal
+# that actually tells you where you are.
+[username]
+style_user = "bold green"
+style_root = "bold red"
+format = "[$user]($style)"
+show_always = false
+
+[hostname]
+ssh_only = true
+format = "[@$hostname]($style) "
+style = "bold green"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+read_only = " [ro]"
+style = "bold cyan"
+# no trailing space -- the next module (if any) supplies its own via the
+# leading separator below.
+format = "[$path]($style)[$read_only]($read_only_style)"
+
+[git_branch]
+style = "bold purple"
+format = "[ | ](dimmed)[git:$branch]($style)"
+
+[git_status]
+ignore_submodules = true
+style = "bold red"
+# whole thing (separator included) is one conditional group, same as
+# starship's own default -- stays hidden together on a clean repo.
+format = '([ | ](dimmed)[\[$all_status$ahead_behind\]]($style))'
+
+# Only shows when a venv/pyenv is actually active (VIRTUAL_ENV set, or a
+# non-global pyenv version) -- not just because a .py file is nearby, so
+# it doesn't add noise outside a real venv context. Set automatically by
+# the _auto_venv chpwd hook in ~/.zshrc, not by starship itself.
+[python]
+format = '[ | ](dimmed)[py:$virtualenv]($style)'
+style = "bold yellow"
+detect_extensions = []
+detect_files = []
+detect_folders = []
+
+[kubernetes]
+# Low-cost: parses ~/.kube/config, never execs kubectl. Renders nothing
+# at all when there's no kubeconfig to read.
+disabled = false
+format = '[ | ](dimmed)[k8s:$context( \($namespace\))]($style)'
+style = "bold blue"
+
+# Command success/failure is shown by $character's own color (green/red)
+# below, not a separate status module.
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"
