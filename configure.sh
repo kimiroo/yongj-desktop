@@ -634,7 +634,7 @@ main() {
     [[ "$(id -u)" -eq 0 ]] && die "Do not run as root — run as a regular user, sudo will be requested when needed"
 
     if [[ ${#steps[@]} -eq 0 ]]; then
-        steps=(repo zsh kitty packages vscode firefox hangul gnome-ext gnome keybindings font)
+        steps=(repo zsh ghostty packages vscode firefox hangul gnome-ext gnome keybindings font)
         log "No arguments given — running default stages: ${steps[*]} (grub/wallpaper-engine are opt-in, see --help)"
     fi
 
@@ -643,7 +643,7 @@ main() {
     local expanded=() s
     for s in "${steps[@]}"; do
         if [[ "$s" == "all" ]]; then
-            expanded+=(repo zsh kitty ghostty packages vscode firefox hangul gnome-ext gnome keybindings font grub wallpaper-engine)
+            expanded+=(repo zsh ghostty packages vscode firefox hangul gnome-ext gnome keybindings font grub wallpaper-engine)
         else
             expanded+=("$s")
         fi
