@@ -3,13 +3,13 @@
 ## Quick Start (remote)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kimiroo/yongj-desktop/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kimiroo/yongj-desktop/refs/heads/master/bootstrap.sh | bash
 ```
 
 With arguments:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kimiroo/yongj-desktop/main/bootstrap.sh | bash -s -- all --yes
+curl -fsSL https://raw.githubusercontent.com/kimiroo/yongj-desktop/refs/heads/master/bootstrap.sh | bash -s -- all --yes
 ```
 
 ## Usage
