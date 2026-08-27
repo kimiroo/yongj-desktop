@@ -380,7 +380,8 @@ configure_gnome_ext() {
     # Clipboard (copyous)
     sudo dnf install -y libgda libgda-sqlite
     gext --filesystem install 8834
-    curl https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/es/highlight.min.js -o "/home/yongj/.local/share/copyous@boerdereinar.dev/highlight.min.js"
+    mkdir -p "$HOME/.local/share/copyous@boerdereinar.dev/"
+    curl https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/es/highlight.min.js -o "$HOME/.local/share/copyous@boerdereinar.dev/highlight.min.js"
     dconf load /org/gnome/shell/extensions/copyous/ < "$REPO_DIR/gnome/copyous.ini"
 
     # Dash to Panel
