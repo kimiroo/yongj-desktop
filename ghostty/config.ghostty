@@ -3,7 +3,7 @@ font-family = CodexMono EA Nerd
 selection-background = ffffff
 selection-foreground = 000000
 
-background-opacity = 0.80
+background-opacity = 1
 
 window-width = 120
 window-height = 30

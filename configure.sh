@@ -21,7 +21,7 @@ confirm() {
 ############
 
 show_help() {
-    cat << 'EOF'
+    cat > /dev/null << 'EOF'
 Usage: ./configure.sh [stages...] [option]
 
 Stages (default stages run if omitted; grub and wallpaper-engine are opt-in):
@@ -32,6 +32,9 @@ Stages (default stages run if omitted; grub and wallpaper-engine are opt-in):
   packages         Install misc packages (btop, neovim)
   vscode           Install VS Code
   firefox          Set Firefox default start page
+  chrony           Install and configure chrony (NTP client)
+  chrome           Install Google Chrome
+  ssh              Install and configure OpenSSH server
   hangul           Configure Korean (Hangul) input
   gnome-ext        Install and configure GNOME Shell extensions
   gnome            Configure GNOME settings (theme, touchpad, workspaces, etc.)
@@ -39,6 +42,8 @@ Stages (default stages run if omitted; grub and wallpaper-engine are opt-in):
   font             Install fonts
   grub             Configure GRUB (opt-in, asks for confirmation)
   wallpaper-engine Build and install linux-wallpaperengine (opt-in)
+
+Presets:
   all              Run every stage above, including grub and wallpaper-engine
 
 Options:
@@ -102,7 +107,7 @@ setup_zsh() {
         || git clone --depth 1 https://github.com/romkatv/zsh-defer "$plugins_dir/zsh-defer"
     [[ -d "$plugins_dir/zsh-syntax-highlighting" ]] \
         || git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting "$plugins_dir/zsh-syntax-highlighting"
-        
+
     # Install starship
     if ! command -v starship >/dev/null 2>&1; then
         log "Installing starship..."
@@ -211,6 +216,7 @@ setup_ghostty() {
     cp "$REPO_DIR/ghostty/config.ghostty" "$HOME/.config/ghostty/config.ghostty"
 
     log "Registering ghostty as default terminal..."
+
     # gsettings
     gsettings set org.gnome.desktop.default-applications.terminal exec 'ghostty'
     gsettings set org.gnome.desktop.default-applications.terminal exec-arg ''
@@ -218,10 +224,12 @@ setup_ghostty() {
     # .desktop
     xdg-mime default ghostty.desktop x-scheme-handler/terminal
 
-    # Nautilus
-    sudo dnf copr enable -y monkeygold/nautilus-open-any-terminal
-    sudo dnf install -y nautilus-open-any-terminal
-    gsettings set com.github.stunkymonkey.nautilus-open-any-terminal terminal ghostty
+    # xdg-terminal-exec
+    sudo dnf install -y xdg-terminal-exec
+    echo 'com.mitchellh.ghostty.desktop' > "$HOME/.config/xdg-terminals.list"
+
+    # Remove ptyxis if installed
+    sudo dnf remove -y ptyxis
 }
 
 ################
@@ -244,7 +252,7 @@ setup_vscode() {
     sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
     log "Creating repository file..."
-    sudo tee /etc/yum.repos.d/vscode.repo << 'EOF'
+    sudo tee /etc/yum.repos.d/vscode.repo > /dev/null << 'EOF'
 [code]
 name=Visual Studio Code
 baseurl=https://packages.microsoft.com/yumrepos/vscode
@@ -257,10 +265,10 @@ EOF
 
     # Check if VS Code is installed
     if ! command -v code >/dev/null 2>&1; then
-        log "VS Code is already installed. Skipping..."
-    else
         log "Installing VS Code..."
         sudo dnf install -y code
+    else
+        log "VS Code is already installed. Skipping..."
     fi
 
     log "Registering VS Code for common code MIME types..."
@@ -295,13 +303,111 @@ EOF
     wget -qO- https://raw.githubusercontent.com/harry-cpp/code-nautilus/master/install.sh | bash
 }
 
+##############
+### chrony ###
+##############
+
+configure_chrony() {
+
+    if ! command -v chronyd >/dev/null 2>&1; then
+        log "Installing chrony..."
+        sudo dnf install -y chrony
+    else
+        log "chrony already installed. Skipping..."
+    fi
+
+    log "Configuring chrony..."
+    sudo tee /etc/chrony.conf > /dev/null << 'EOF'
+server ntp.kriss.re.kr iburst prefer
+pool kr.pool.ntp.org iburst
+
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+    log "Restarting chrony service..."
+    sudo systemctl restart chronyd
+}
+
+##############
+### Chrome ###
+##############
+
+setup_chrome() {
+    log "Enabling Fedora Workstation repositories for Google Chrome..."
+    sudo dnf install -y fedora-workstation-repositories
+
+    log "Enabling Google Chrome repository..."
+    sudo dnf config-manager setopt google-chrome.enabled=1
+
+    if ! command -v google-chrome >/dev/null 2>&1; then
+        log "Installing Google Chrome..."
+        sudo dnf install -y google-chrome-stable
+    else
+        log "Google Chrome already installed. Skipping..."
+    fi
+}
+
+##################
+### ssh-server ###
+##################
+
+configure_ssh_server() {
+
+    if ! command -v sshd >/dev/null 2>&1; then
+        log "Installing OpenSSH server..."
+        sudo dnf install -y openssh-server
+    else
+        log "OpenSSH server already installed. Skipping..."
+    fi
+
+    log "Configuring SSH server..."
+
+    BASE_USERNAME="${1:-$USER}"
+
+    if [ "$BASE_USERNAME" = "root" ]; then
+        PERMIT_ROOT_LOGIN="prohibit-password"
+    else
+        PERMIT_ROOT_LOGIN="no"
+    fi
+
+    sudo mkdir -p /etc/ssh/sshd_config.d/
+
+    sudo tee /etc/ssh/sshd_config.d/00-security.conf > /dev/null << EOF
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin ${PERMIT_ROOT_LOGIN}
+AllowUsers ${BASE_USERNAME}
+MaxAuthTries 3
+LoginGraceTime 60
+ClientAliveInterval 30
+ClientAliveCountMax 0
+MaxStartups 10
+AllowTcpForwarding no
+X11Forwarding no
+AllowAgentForwarding no
+UseDNS no
+PrintMotd no
+TCPKeepAlive yes
+KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+MACs umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com
+EOF
+
+    log "Restarting SSH server..."
+    sudo systemctl restart sshd
+}
+
 #########################
 ### Firefox StartPage ###
 #########################
 
 configure_ff_startpage() {
     sudo mkdir -p /etc/firefox/policies
-    sudo tee /etc/firefox/policies/policies.json << 'EOF'
+    sudo tee /etc/firefox/policies/policies.json > /dev/null << 'EOF'
 {
   "policies": {
     "Homepage": {
@@ -388,9 +494,6 @@ configure_gnome_ext() {
     gext --filesystem install 1160
     dconf load /org/gnome/shell/extensions/dash-to-panel/ < "$REPO_DIR/gnome/dash-to-panel.ini"
 
-    # Desktop Icons NG
-    gext --filesystem install 2087
-
     # Panel Date Format
     gext --filesystem install 1462
     dconf load /org/gnome/shell/extensions/panel-date-format/ < "$REPO_DIR/gnome/panel-date-format.ini"
@@ -414,7 +517,7 @@ configure_gnome_ext() {
     gext --filesystem install 3733
     dconf load /org/gnome/shell/extensions/tiling-assistant/ < "$REPO_DIR/gnome/tiling-assistant.ini"
 
-    # Rounded Window Corners Reborn 
+    # Rounded Window Corners Reborn
     gext --filesystem install 7048
 
     # Steal my focus window
@@ -453,9 +556,14 @@ configure_gnome() {
     dconf write /org/gnome/desktop/interface/document-font-name "'Pretendard 11'"
     dconf write /org/gnome/desktop/interface/monospace-font-name "'CodexMono EA Nerd 11'"
 
+    # Disable 'Support GNOME' popup
+    dconf write /org/gnome/settings-daemon/plugins/housekeeping/donation-reminder-enabled false
+
+    # Set pinned apps
+    dconf load /org/gnome/shell/favorite-apps/ < "$REPO_DIR/gnome/pinned-apps.ini"
+
     # Launch New Instance
     gnome-extensions enable launch-new-instance@gnome-shell-extensions.gcampax.github.com
-
 }
 
 ##########################
@@ -625,7 +733,7 @@ main() {
         case "$1" in
             -y|--yes) ASSUME_YES=1 ;;
             -h|--help) show_help; exit 0 ;;
-            repo|zsh|kitty|ghostty|packages|vscode|firefox|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all)
+            repo|zsh|kitty|ghostty|packages|vscode|firefox|chrony|chrome|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all)
                 steps+=("$1") ;;
             *) die "Unknown argument: $1 (see --help)" ;;
         esac
@@ -635,7 +743,7 @@ main() {
     [[ "$(id -u)" -eq 0 ]] && die "Do not run as root — run as a regular user, sudo will be requested when needed"
 
     if [[ ${#steps[@]} -eq 0 ]]; then
-        steps=(repo zsh ghostty packages vscode firefox hangul gnome-ext gnome keybindings font)
+        steps=(repo zsh ghostty packages vscode firefox chrony ssh hangul gnome-ext gnome keybindings font)
         log "No arguments given — running default stages: ${steps[*]} (grub/wallpaper-engine are opt-in, see --help)"
     fi
 
@@ -644,7 +752,7 @@ main() {
     local expanded=() s
     for s in "${steps[@]}"; do
         if [[ "$s" == "all" ]]; then
-            expanded+=(repo zsh ghostty packages vscode firefox hangul gnome-ext gnome keybindings font grub wallpaper-engine)
+            expanded+=(repo zsh ghostty packages vscode firefox chrony chrome ssh hangul gnome-ext gnome keybindings font grub wallpaper-engine)
         else
             expanded+=("$s")
         fi
@@ -666,6 +774,9 @@ main() {
             packages) setup_packages ;;
             vscode) setup_vscode ;;
             firefox) configure_ff_startpage ;;
+            chrony) configure_chrony ;;
+            chrome) setup_chrome ;;
+            ssh) configure_ssh_server ;;
             hangul) configure_hangul_input ;;
             gnome-ext) configure_gnome_ext ;;
             gnome) configure_gnome ;;
@@ -676,7 +787,7 @@ main() {
         esac
     done
 
-    log "Done. Re-login/reboot needed for: default shell (zsh), Korean input (ralt_hangul), keybindings, GRUB (if configured)."
+    log "Done. Re-login/reboot may be required for some changes to take effect (e.g., zsh, gnome extensions, grub)."
 }
 
 main "$@"
