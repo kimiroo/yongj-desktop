@@ -734,7 +734,7 @@ main() {
         case "$1" in
             -y|--yes) ASSUME_YES=1 ;;
             -h|--help) show_help; exit 0 ;;
-            repo|zsh|kitty|ghostty|packages|vscode|firefox|chrony|chrome|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all)
+            repo|zsh|kitty|ghostty|packages|vscode|firefox|chrony|chrome|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all|headless)
                 steps+=("$1") ;;
             *) die "Unknown argument: $1 (see --help)" ;;
         esac
