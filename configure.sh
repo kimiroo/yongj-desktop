@@ -45,6 +45,7 @@ Stages (default stages run if omitted; grub and wallpaper-engine are opt-in):
 
 Presets:
   all              Run every stage above, including grub and wallpaper-engine
+  headless         Run following stages only: repo, zsh, chrony, ssh
 
 Options:
   -y, --yes        Assume yes to all confirmation prompts
@@ -753,6 +754,8 @@ main() {
     for s in "${steps[@]}"; do
         if [[ "$s" == "all" ]]; then
             expanded+=(repo zsh ghostty packages vscode firefox chrony chrome ssh hangul gnome-ext gnome keybindings font grub wallpaper-engine)
+        elif [[ "$s" == "headless" ]]; then
+            expanded+=(repo zsh chrony ssh)
         else
             expanded+=("$s")
         fi
