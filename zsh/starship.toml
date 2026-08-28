@@ -76,7 +76,7 @@ detect_folders = []
 [kubernetes]
 # Low-cost: parses ~/.kube/config, never execs kubectl. Renders nothing
 # at all when there's no kubeconfig to read.
-disabled = false
+disabled = true
 symbol = "󱃾 "
 format = '[ · ](dimmed)[$symbol$context( \($namespace\))]($style)'
 style = "bold blue"
