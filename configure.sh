@@ -163,38 +163,6 @@ setup_zsh() {
 
 }
 
-#############
-### kitty ###
-#############
-
-setup_kitty() {
-
-    # Install kitty
-    if ! command -v kitty >/dev/null 2>&1; then
-        log "Installing kitty..."
-        sudo dnf install -y kitty
-    else
-        log "kitty already installed. Skipping..."
-    fi
-
-    log "Configuring kitty..."
-    mkdir -p "$HOME/.config/kitty"
-    cp "$REPO_DIR/kitty/kitty.conf" "$HOME/.config/kitty/kitty.conf"
-
-    log "Registering kitty as default terminal..."
-    # gsettings
-    gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty'
-    gsettings set org.gnome.desktop.default-applications.terminal exec-arg ''
-
-    # .desktop
-    xdg-mime default kitty.desktop x-scheme-handler/terminal
-
-    # Nautilus
-    sudo dnf copr enable -y monkeygold/nautilus-open-any-terminal
-    sudo dnf install -y nautilus-open-any-terminal
-    gsettings set com.github.stunkymonkey.nautilus-open-any-terminal terminal kitty
-}
-
 ###############
 ### Ghostty ###
 ###############
@@ -503,10 +471,6 @@ configure_gnome_ext() {
     gext --filesystem install 10373
     dconf load /org/gnome/shell/extensions/media-controller/ < "$REPO_DIR/gnome/media-controller.ini"
 
-    # Window Title Pro Topbar
-    gext --filesystem install 10319
-    dconf load /org/gnome/shell/extensions/window-title-pro/ < "$REPO_DIR/gnome/window-title-pro.ini"
-
     # Multi Monitor Bar
     gext --filesystem install 8773
 
@@ -734,7 +698,7 @@ main() {
         case "$1" in
             -y|--yes) ASSUME_YES=1 ;;
             -h|--help) show_help; exit 0 ;;
-            repo|zsh|kitty|ghostty|packages|vscode|firefox|chrony|chrome|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all|headless)
+            repo|zsh|ghostty|packages|vscode|firefox|chrony|chrome|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all|headless)
                 steps+=("$1") ;;
             *) die "Unknown argument: $1 (see --help)" ;;
         esac
@@ -772,7 +736,6 @@ main() {
         case "$step" in
             repo) configure_repo_n_update ;;
             zsh) setup_zsh ;;
-            kitty) setup_kitty ;;
             ghostty) setup_ghostty ;;
             packages) setup_packages ;;
             vscode) setup_vscode ;;
