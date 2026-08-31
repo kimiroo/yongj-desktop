@@ -34,6 +34,7 @@ Stages (default stages run if omitted; grub and wallpaper-engine are opt-in):
   firefox          Set Firefox default start page
   chrony           Install and configure chrony (NTP client)
   chrome           Install Google Chrome
+  ai               Install AI CLI tools
   nextdns          Install and configure NextDNS
   ssh              Install and configure OpenSSH server
   hangul           Configure Korean (Hangul) input
@@ -334,6 +335,21 @@ setup_nextdns() {
     else
         log "NextDNS already installed. Skipping..."
     fi
+}
+
+##############
+### AI CLI ###
+##############
+
+setup_ai_cli() {
+    log "Installing Claude Code..."
+    curl -fsSL https://claude.ai/install.sh | bash
+
+    log "Installing Antigravity CLI..."
+    curl -fsSL https://antigravity.google/cli/install.sh | bash
+
+    log "Installing Codex CLI..."
+    curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 bash
 }
 
 ##################
@@ -715,7 +731,7 @@ main() {
         case "$1" in
             -y|--yes) ASSUME_YES=1 ;;
             -h|--help) show_help; exit 0 ;;
-            repo|zsh|ghostty|packages|vscode|firefox|chrony|chrome|nextdns|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all|headless)
+            repo|zsh|ghostty|packages|vscode|firefox|chrony|chrome|nextdns|ai|ssh|hangul|gnome-ext|gnome|keybindings|font|grub|wallpaper-engine|all|headless)
                 steps+=("$1") ;;
             *) die "Unknown argument: $1 (see --help)" ;;
         esac
@@ -725,7 +741,7 @@ main() {
     [[ "$(id -u)" -eq 0 ]] && die "Do not run as root — run as a regular user, sudo will be requested when needed"
 
     if [[ ${#steps[@]} -eq 0 ]]; then
-        steps=(repo zsh ghostty packages vscode firefox chrony nextdns ssh hangul gnome-ext gnome keybindings font)
+        steps=(repo zsh ghostty packages vscode firefox chrony nextdns ai ssh hangul gnome-ext gnome keybindings font)
         log "No arguments given — running default stages: ${steps[*]} (grub/wallpaper-engine are opt-in, see --help)"
     fi
 
@@ -734,7 +750,7 @@ main() {
     local expanded=() s
     for s in "${steps[@]}"; do
         if [[ "$s" == "all" ]]; then
-            expanded+=(repo zsh ghostty packages vscode firefox chrony nextdns chrome ssh hangul gnome-ext gnome keybindings font grub wallpaper-engine)
+            expanded+=(repo zsh ghostty packages vscode firefox chrony nextdns ai chrome ssh hangul gnome-ext gnome keybindings font grub wallpaper-engine)
         elif [[ "$s" == "headless" ]]; then
             expanded+=(repo zsh chrony ssh)
         else
@@ -760,6 +776,7 @@ main() {
             chrony) configure_chrony ;;
             chrome) setup_chrome ;;
             nextdns) setup_nextdns ;;
+            ai) setup_ai_cli ;;
             ssh) configure_ssh_server ;;
             hangul) configure_hangul_input ;;
             gnome-ext) configure_gnome_ext ;;
