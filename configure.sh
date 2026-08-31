@@ -346,6 +346,8 @@ setup_ai_cli() {
     curl -fsSL https://claude.ai/install.sh | bash
 
     log "Installing Antigravity CLI..."
+    pkill -9 agy
+    rm -f "$HOME/.local/bin/agy"
     curl -fsSL https://antigravity.google/cli/install.sh | bash
 
     log "Installing Codex CLI..."
