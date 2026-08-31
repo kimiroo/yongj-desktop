@@ -480,13 +480,13 @@ configure_gnome_ext() {
     gext --filesystem install 1160
     dconf load /org/gnome/shell/extensions/dash-to-panel/ < "$REPO_DIR/gnome/dash-to-panel.ini"
 
-    # Panel Date Format
-    gext --filesystem install 1462
-    dconf load /org/gnome/shell/extensions/panel-date-format/ < "$REPO_DIR/gnome/panel-date-format.ini"
-
     # Media Controls
     gext --filesystem install 10373
     dconf load /org/gnome/shell/extensions/media-controller/ < "$REPO_DIR/gnome/media-controller.ini"
+
+    # Window Title Pro Topbar
+    gext --filesystem install 10319
+    dconf load /org/gnome/shell/extensions/window-title-pro/ < "$REPO_DIR/gnome/window-title-pro.ini"
 
     # Multi Monitor Bar
     gext --filesystem install 8773
